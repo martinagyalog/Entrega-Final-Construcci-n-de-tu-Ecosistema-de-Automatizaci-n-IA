@@ -1,0 +1,1003 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyHour"
+            }
+          ]
+        },
+        "filters": {
+          "labelIds": [
+            "Label_502474941562459864"
+          ],
+          "readStatus": "unread"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -352,
+        96
+      ],
+      "id": "8a2e623f-5cec-407b-8899-66d5e43faeb0",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "94l1bwdCWs46pCRv",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3.6-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3.6-flash",
+          "cachedResultUrl": ""
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $('Get a message').item.json.text }}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "builtInTools": {},
+        "options": {
+          "systemMessage": "Sos un asistente que extrae información estructurada de mails de pedidos de cotización. Leé el mail y devolvé SOLO un JSON válido con este formato exacto, sin texto adicional:  {   \"nombre_empresa\": \"string\",   \"email\": \"string\",   \"descripcion\": \"string (resumen fiel de lo que pide, sin inventar nada)\",   \"urgencia\": \"Alta\" | \"Media\" | \"Baja\" }  Criterio para urgencia: - Alta: menciona plazos cortos (esta semana, urgente, lo antes posible) o dice explícitamente que es urgente. - Media: menciona un plazo pero sin apuro extremo (este mes, próximas semanas). - Baja: no menciona plazo, o dice explícitamente que no hay apuro.  Si no podés inferir la urgencia con confianza, usá \"Media\" por defecto."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        320,
+        96
+      ],
+      "id": "64aab40a-c2cd-4a22-9f4f-9b9d9fd80279",
+      "name": "Message a model",
+      "retryOnFail": true,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "Ttz1gJ8J6ekGMoer",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}",
+        "simple": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -128,
+        96
+      ],
+      "id": "6bd62d94-1879-44b0-8eb7-9cfadcb2430a",
+      "name": "Get a message",
+      "webhookId": "075221dc-8632-4a3b-b073-f24c7b881479",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "94l1bwdCWs46pCRv",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map(item => {\n  const rawText = item.json.content.parts[0].text;\n  const data = JSON.parse(rawText);\n  return { json: data };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        96
+      ],
+      "id": "13df8522-9fb7-44a0-b62a-9ce66dfe23a4",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "databasePage",
+        "dataSourceId": {
+          "__rl": true,
+          "value": "3c709205-eaef-8022-a44d-000b5b10bbc6",
+          "mode": "list",
+          "cachedResultName": "Propuestas",
+          "cachedResultUrl": "https://app.notion.com/p/3c709205eaef80bcacd0df5bb956fad6"
+        },
+        "title": "={{ $('Code in JavaScript').item.json.nombre_empresa }} - {{ $now.format('yyyy-MM-dd HH:mm') }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Descripción original|rich_text",
+              "textContent": "={{ $('Code in JavaScript').item.json.descripcion }}"
+            },
+            {
+              "key": "Urgencia|select",
+              "selectValue": "={{ $('Code in JavaScript').item.json.urgencia }}"
+            },
+            {
+              "key": "Estado|select",
+              "selectValue": "Pendiente"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        1552,
+        80
+      ],
+      "id": "7d851f21-9d4d-4c61-a0af-bbbe61696a35",
+      "name": "Create a database page",
+      "credentials": {
+        "notionOAuth2Api": {
+          "id": "D2bHLJ7HkD8snvJK",
+          "name": "Notion account 3"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "databasePage",
+        "operation": "getAll",
+        "dataSourceId": {
+          "__rl": true,
+          "value": "3c709205-eaef-8086-826a-000bd3e3bf5a",
+          "mode": "list",
+          "cachedResultName": "Clientes",
+          "cachedResultUrl": "https://app.notion.com/p/3c709205eaef80de8bafff7c1aaad54e"
+        },
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "key": "Contacto|email",
+              "condition": "equals",
+              "richTextValue": "={{ $json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        912,
+        96
+      ],
+      "id": "941b16bc-1d33-4546-b872-721f5b8c85c7",
+      "name": "Get many database pages",
+      "alwaysOutputData": true,
+      "credentials": {
+        "notionOAuth2Api": {
+          "id": "D2bHLJ7HkD8snvJK",
+          "name": "Notion account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f8434441-4eaf-40f6-ac9d-5aab56f9d1a3",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1104,
+        96
+      ],
+      "id": "1d3e531c-e939-416f-b5f7-aae9775ea7af",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "databasePage",
+        "dataSourceId": {
+          "__rl": true,
+          "value": "3c709205-eaef-8086-826a-000bd3e3bf5a",
+          "mode": "list",
+          "cachedResultName": "Clientes",
+          "cachedResultUrl": "https://app.notion.com/p/3c709205eaef80de8bafff7c1aaad54e"
+        },
+        "title": "=   {{ $('Code in JavaScript').item.json.nombre_empresa }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Contacto|email",
+              "emailValue": "={{ $('Code in JavaScript').item.json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        1312,
+        160
+      ],
+      "id": "096bec32-aebc-4e97-8535-c9dc00f4c2b7",
+      "name": "Create a database page1",
+      "credentials": {
+        "notionOAuth2Api": {
+          "id": "D2bHLJ7HkD8snvJK",
+          "name": "Notion account 3"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Code in JavaScript').item.json.urgencia }}",
+                    "rightValue": "Alta",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "ca28e9d3-3b85-4072-a863-60d863df601a"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Alta"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "7b259c37-34f7-4eef-8331-076abd1a5707",
+                    "leftValue": "={{ $('Code in JavaScript').item.json.urgencia }}",
+                    "rightValue": "Media",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Media"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "2c7c6226-93a3-4d17-8508-a16d5cbb0a47",
+                    "leftValue": "={{ $('Code in JavaScript').item.json.urgencia }}",
+                    "rightValue": "Baja",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Baja"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1744,
+        64
+      ],
+      "id": "568fb100-433f-4f3b-ac17-8fd42e79e92d",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "getMarkdown",
+        "pageId": {
+          "__rl": true,
+          "value": "https://app.notion.com/p/Manual-de-Tono-y-Voz-de-Marca-3c709205eaef801d9549f5fbbc89d8be?source=copy_link",
+          "mode": "url"
+        }
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        2096,
+        -48
+      ],
+      "id": "62ece6d4-185f-412f-b0b2-3e1cc1d18101",
+      "name": "Get page markdown",
+      "credentials": {
+        "notionOAuth2Api": {
+          "id": "jUCMMzbAVecPKIuI",
+          "name": "Notion account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "models/gemini-3-flash-preview"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=   {{ $('Code in JavaScript').item.json.descripcion }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "systemMessage": "=   {{ $json.markdown }}        Con estas reglas de marca, redactá una propuesta comercial completa siguiendo la estructura del manual (apertura personalizada → entendimiento del problema → alcance → tiempos y precio → cierre). No inventes precios ni plazos que no estén en la descripción del cliente — si falta un dato, marcalo como [COMPLETAR: dato]."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        2240,
+        -48
+      ],
+      "id": "b222b1f0-495c-457e-a13f-bb8737123264",
+      "name": "Message a model1",
+      "retryOnFail": true,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "Ttz1gJ8J6ekGMoer",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map(item => {\n  const propuestaTexto = item.json.content.parts[0].text;\n  return { json: { propuesta_generada: propuestaTexto } };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2560,
+        -48
+      ],
+      "id": "1ca95b5d-674a-404d-8d5a-5a39cc9aca8c",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('Create a database page').item.json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Propuesta generada (IA)|rich_text",
+              "textContent": "={{ $json.propuesta_generada }}"
+            },
+            {
+              "key": "Estado|select",
+              "selectValue": "Procesado por IA"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        2784,
+        -48
+      ],
+      "id": "2e167040-ddb0-448f-bba4-2e519b2d974a",
+      "name": "Update a database page",
+      "credentials": {
+        "notionOAuth2Api": {
+          "id": "RCGXKxqa5WRpuOkR",
+          "name": "Notion account 6"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "databasePage",
+        "dataSourceId": {
+          "__rl": true,
+          "value": "e7a09205-eaef-8210-9ee8-076d08724c7d",
+          "mode": "list",
+          "cachedResultName": "Log de Errores",
+          "cachedResultUrl": "https://app.notion.com/p/3c709205eaef8055b83fcee25af113d4"
+        },
+        "title": "=Error - {{ $now.format('yyyy-MM-dd HH:mm') }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Tipo de error|select",
+              "selectValue": "API IA Falló"
+            },
+            {
+              "key": "Detalle|rich_text",
+              "textContent": "={{ typeof $json.error === 'string' ? $json.error : ($json.error?.message || JSON.stringify($json.error)) }}"
+            },
+            {
+              "key": "Fecha|date",
+              "date": "={{ $now }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        2128,
+        592
+      ],
+      "id": "8cc16b77-9775-47fb-b987-f6bc19aeddc8",
+      "name": "Create a database page2",
+      "credentials": {
+        "notionOAuth2Api": {
+          "id": "RCGXKxqa5WRpuOkR",
+          "name": "Notion account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "sendAndWait",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0BP363JG10",
+          "mode": "list",
+          "cachedResultName": "presupuestación_coder"
+        },
+        "message": "=Nueva propuesta para revisar:\\n\\n{{ $json.property_propuesta_generada_ia }}",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        3008,
+        -144
+      ],
+      "id": "c0aa1852-11c2-4ea4-aef6-d17cd7d1789b",
+      "name": "Send message and wait for response",
+      "webhookId": "b268b878-18ce-44da-9d8a-85ef067baed2",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "dU98YsAIyHoLYFgK",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ce17b6ff-f2d1-4138-afb2-95e044442dcd",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3232,
+        -144
+      ],
+      "id": "d9ba1c0b-b57f-4b66-9415-f05eeb2b0483",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "sendTo": "martinagyalog@gmail.com",
+        "subject": "=Propuesta comercial - {{ $('Update a database page').item.json.property_id_propuesta }}",
+        "message": "={{ $('Update a database page').item.json.property_propuesta_generada_ia }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3456,
+        -240
+      ],
+      "id": "52ba0dd0-e4e6-4018-9f4d-a1c9286673ef",
+      "name": "Send a message",
+      "webhookId": "07bd81ef-4be4-41bf-8294-eb3d80b71207",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "94l1bwdCWs46pCRv",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Create a database page').item.json.id }}",
+          "__regex": "^([0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12})"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Estado|select",
+              "selectValue": "Rechazado"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        3456,
+        -48
+      ],
+      "id": "3f03e432-8ea0-43e6-b7e1-921639570ff5",
+      "name": "Update a database page1",
+      "credentials": {
+        "notionOAuth2Api": {
+          "id": "RCGXKxqa5WRpuOkR",
+          "name": "Notion account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('Create a database page').item.json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Estado|select",
+              "selectValue": "Enviado"
+            },
+            {
+              "key": "Aprobado|checkbox",
+              "checkboxValue": true
+            },
+            {
+              "key": "Fecha de envío|date",
+              "date": "={{ $('Send message and wait for response').item.json.data.respondedAt }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        3680,
+        -240
+      ],
+      "id": "f44bc03c-0293-427a-a123-b07fdaa4d78f",
+      "name": "Update a database page2",
+      "credentials": {
+        "notionOAuth2Api": {
+          "id": "RCGXKxqa5WRpuOkR",
+          "name": "Notion account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resume": "specificTime",
+        "dateTime": "2026-09-12T18:50:24"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1920,
+        112
+      ],
+      "id": "bff1629e-74d8-49c2-a8dc-4dcaddc9b301",
+      "name": "Wait",
+      "webhookId": "0793a8e4-242c-48b3-bc32-d3399e9ef6aa"
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        96,
+        96
+      ],
+      "id": "b2690f97-9c69-4900-b5d1-1e0264f4f34d",
+      "name": "Mark a message as read",
+      "webhookId": "8d2740ab-6659-4ec7-bd63-9d6d182e9391",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "94l1bwdCWs46pCRv",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "Mark a message as read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a database page2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Get many database pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many database pages": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Create a database page",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a database page1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a database page1": {
+      "main": [
+        [
+          {
+            "node": "Create a database page",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a database page2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a database page": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a database page2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Get page markdown",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get page markdown": {
+      "main": [
+        [
+          {
+            "node": "Message a model1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a database page2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Update a database page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a database page": {
+      "main": [
+        [
+          {
+            "node": "Send message and wait for response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a database page2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message and wait for response": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update a database page1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Update a database page2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Get page markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark a message as read": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "2d22884b-2a95-4a2b-ad4c-dbcae13f3841",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ef2c8b4c7469421c21782281ab2cd67bb75833fc3650968313589d7f603add5c"
+  },
+  "nodeGroups": [],
+  "id": "yNZHv0ELszlQRfgr",
+  "tags": []
+}
